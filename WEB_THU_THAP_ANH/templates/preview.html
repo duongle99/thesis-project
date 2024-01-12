@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Xem trước</title>
+</head>
+<body>
+    <h1>Xem trước</h1>
+    <div id="preview-container"></div>
+    <script>
+        // Lấy dữ liệu video từ camera và hiển thị trên trang
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                const previewContainer = document.getElementById('preview-container');
+                previewContainer.appendChild(video);
+            })
+            .catch(error => {
+                console.error('Không thể truy cập camera:', error);
+            });
+    </script>
+</body>
+</html>
