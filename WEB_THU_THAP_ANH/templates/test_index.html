@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng ký</title>
     <style>
       body {
@@ -101,7 +103,7 @@
         <video id="camera-preview" width="1280" height="960" autoplay></video>
       </div>
       <div class="note">
-        Nhấn nhiều lần để chụp nhiều ảnh, hãy chụp ít nhất 20 hình
+        Nhấn giữ để chụp nhiều ảnh
       </div>
       <div class="note">
         Chú ý: Căn chỉnh khuôn mặt để thu được ảnh rõ nét, có thể nghiêng mặt
@@ -125,6 +127,8 @@
       const photoContainer = document.getElementById("photo-container");
       let photoDataUrls = [];
       let isCapturing = false;
+      let captureInterval;
+      const maxPhotos = 500; // Set the maximum number of photos
 
       navigator.mediaDevices
         .getUserMedia({ video: true })
@@ -137,15 +141,20 @@
 
       function startCapture() {
         if (!isCapturing) {
-          // Clear previous captures
           isCapturing = true;
-          captureInterval = setInterval(capturePhoto, 10); // Adjust the interval as needed
+          captureInterval = setInterval(() => {
+            if (photoDataUrls.length < maxPhotos) {
+              capturePhoto();
+            } else {
+              stopCapture();
+              alert("Đã đủ số lượng ảnh!");
+            }
+          }, 10);
         }
       }
 
       function stopCapture() {
         if (isCapturing) {
-          // Stop capturing photos
           isCapturing = false;
           clearInterval(captureInterval);
         }
@@ -161,12 +170,10 @@
         const photoDataUrl = canvas.toDataURL("image/png");
         photoDataUrls.push(photoDataUrl);
 
-        // Display the captured photo
         const image = document.createElement("img");
         image.src = photoDataUrl;
         photoContainer.appendChild(image);
 
-        // Create a hidden input field for each photo
         const photoInput = document.createElement("input");
         photoInput.type = "hidden";
         photoInput.name = "photo";
