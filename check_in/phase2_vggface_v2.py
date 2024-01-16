@@ -9,6 +9,7 @@ from mtcnn import MTCNN
 from sklearn.metrics.pairwise import cosine_similarity
 from deepface.commons import functions
 
+
 credentials_file = "river-engine-400013-b1d721c87331.json"
 spreadsheet_id = "1qTj4g-Yy-iuscuGuyt38GCMTPKctLtZhC1s5e0qfmU8"
 worksheet_name = "database"
@@ -16,6 +17,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
 client = gspread.authorize(credentials)
 sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
+
 
 # Connect to the SQLite database
 conn = sqlite3.connect("face_encodings_deepface_vgg_face.db")

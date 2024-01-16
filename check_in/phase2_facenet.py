@@ -64,7 +64,7 @@ def recognize_face(face_embedding):
     return recognized_name, confidence
 
 # Open the default camera (change index if you have multiple cameras)
-cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.13:554/'
+cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.12:554/'
 camera = cv2.VideoCapture(cam_path) 
 # Load the FaceNet model for face recognition
 model = DeepFace.build_model("Facenet")

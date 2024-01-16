@@ -9,6 +9,7 @@ from mtcnn import MTCNN
 from sklearn.metrics.pairwise import cosine_similarity
 from deepface.commons import functions
 
+
 credentials_file = "river-engine-400013-b1d721c87331.json"
 spreadsheet_id = "1qTj4g-Yy-iuscuGuyt38GCMTPKctLtZhC1s5e0qfmU8"
 worksheet_name = "database"
@@ -16,6 +17,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
 client = gspread.authorize(credentials)
 sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
+
 
 # Connect to the SQLite database
 conn = sqlite3.connect("face_encodings_deepface_vgg_face.db")
@@ -25,6 +27,12 @@ sent_names = set()
 
 now = datetime.now()
 current_date = now.strftime("%Y-%m-%d")
+
+def update_checkbox(sheet, row, column, value):
+    cell = sheet.cell(row, column)
+    cell.value = value
+    sheet.update_cells([cell])
+
 
 def calculate_similarity(embedding1, embedding2):
     # Convert the embeddings to NumPy arrays
@@ -64,9 +72,46 @@ def recognize_face(face_embedding):
         recognized_name = "Unknown"
     return recognized_name, confidence
 
+# Hàng và cột bắt đầu trong Google Sheets
+start_row_sheets = 6
+start_column_sheets = 1
+
+# Cập nhật một ô checkbox trong Google Sheets
+def update_checkbox(sheet, row, column, value):
+    cell = sheet.cell(row, column)
+    cell.value = value
+    sheet.update_cells([cell])
+
+# Hàm để lấy vị trí ô trống tiếp theo trong cột
+def get_next_empty_row(sheet, column):
+    values = sheet.col_values(column)
+    next_empty_row = start_row_sheets + len(values)
+    return next_empty_row
+
+# Hàm để push danh sách recognized_name trước khi nhận diện
+def push_names_to_sheet(sheet, names):
+    # Xóa dữ liệu cũ trong cột NGÀY TỔ CHỨC, THỜI ĐIỂM CHECK IN và đặt checkbox về False
+    cell_range = sheet.range(start_row_sheets, start_column_sheets + 1, start_row_sheets + len(names) - 1, start_column_sheets + 2)
+    for cell in cell_range:
+        cell.value = ""
+    checkbox_range = sheet.range(start_row_sheets, start_column_sheets + 3, start_row_sheets + len(names) - 1, start_column_sheets + 3)
+    for checkbox_cell in checkbox_range:
+        checkbox_cell.value = False
+
+    # Ghi danh sách names vào cột STT và MSSV
+    for i, name in enumerate(names):
+        sheet.update_cell(start_row_sheets + i, start_column_sheets, i + 1)  # Cập nhật STT
+        sheet.update_cell(start_row_sheets + i, start_column_sheets + 1, name)  # Cập nhật MSSV
+
+# Lấy danh sách recognized_name từ SQLite và push vào Google Sheets
+cursor.execute("SELECT name FROM face_encodings_deepface")
+rows = cursor.fetchall()
+recognized_names = [row[0] for row in rows]
+push_names_to_sheet(sheet, recognized_names)
 # Open the default camera (change index if you have multiple cameras)
-cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.13:554/'
-camera = cv2.VideoCapture(cam_path) 
+# cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.12:554/'
+# camera = cv2.VideoCapture(cam_path) 
+camera = cv2.VideoCapture(0)
 # Load the VGGFace model for face recognition
 model = DeepFace.build_model("VGG-Face")
 
@@ -114,17 +159,45 @@ while True:
                 # Display the recognized name and confidence above the face rectangle
                 text = f"{recognized_name}: {confidence:.2f}"
                 cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0),2)
-
                 if recognized_name not in sent_names and recognized_name != "Unknown":
-                    # Write down the current time
-                    current_time = now.strftime("%H:%M:%S")
+                        # Ghi thời gian hiện tại
+                        current_time = now.strftime("%H:%M:%S")
 
-                    # Insert information to the Google Sheet
-                    sheet.append_row([recognized_name, current_date, current_time])
-                    sent_names.add(recognized_name)
+                        # Kiểm tra xem recognized_name đã có trong sheet chưa
+                        cell = sheet.find(recognized_name, in_column=start_column_sheets + 1)
 
+                        # Nếu recognized_name đã có trong sheet
+                        if cell:
+                            # Lấy hàng của recognized_name
+                            row_of_recognized_name = cell.row
+
+                            # Cập nhật NGÀY TỔ CHỨC và THỜI ĐIỂM CHECK IN
+                            sheet.update_cell(row_of_recognized_name, start_column_sheets + 2, current_date)  # Cập nhật NGÀY TỔ CHỨC
+                            sheet.update_cell(row_of_recognized_name, start_column_sheets + 3, current_time)  # Cập nhật THỜI ĐIỂM CHECK IN
+
+                            # Cập nhật ô checkbox (CÓ MẶT)
+                            checkbox_column = start_column_sheets + 4  # Giả sử ô checkbox nằm ở cột THỜI ĐIỂM CHECK IN + 2
+                            update_checkbox(sheet, row_of_recognized_name, checkbox_column, True)  # True để tích ô checkbox
+
+                            # Cập nhật tập hợp sent_names
+                            sent_names.add(recognized_name)
+                        else:
+                            # Nếu recognized_name chưa có trong sheet, thêm vào cuối
+                            next_empty_row = get_next_empty_row(sheet, start_column_sheets)
+                            sheet.update_cell(next_empty_row, start_column_sheets, next_empty_row - start_row_sheets + 1)  # Cập nhật STT
+                            sheet.update_cell(next_empty_row, start_column_sheets + 1, recognized_name)  # Cập nhật MSSV
+                            sheet.update_cell(next_empty_row, start_column_sheets + 2, current_date)  # Cập nhật NGÀY TỔ CHỨC
+                            sheet.update_cell(next_empty_row, start_column_sheets + 3, current_time)  # Cập nhật THỜI ĐIỂM CHECK IN
+
+                            # Cập nhật ô checkbox (CÓ MẶT)
+                            checkbox_column = start_column_sheets + 4  # Giả sử ô checkbox nằm ở cột THỜI ĐIỂM CHECK IN + 2
+                            update_checkbox(sheet, next_empty_row, checkbox_column, True)  # True để tích ô checkbox
+
+                            # Cập nhật tập hợp sent_names
+                            sent_names.add(recognized_name)
     # Display the frame with recognized faces
-    cv2.imshow("Face Recognition", frame)
+    resized_frame = cv2.resize(frame, (640, 480))
+    cv2.imshow("Face Recognition", resized_frame)
 
     # Break the loop if 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
