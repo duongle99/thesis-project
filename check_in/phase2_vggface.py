@@ -9,9 +9,8 @@ from mtcnn import MTCNN
 from sklearn.metrics.pairwise import cosine_similarity
 from deepface.commons import functions
 
-
 credentials_file = "river-engine-400013-b1d721c87331.json"
-spreadsheet_id = "1qTj4g-Yy-iuscuGuyt38GCMTPKctLtZhC1s5e0qfmU8"
+spreadsheet_id = "1fDevrxGaxaJ1OchLWNlblrP9fHoaUs-hBeGe7xoZegM"
 worksheet_name = "database"
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
@@ -109,9 +108,9 @@ rows = cursor.fetchall()
 recognized_names = [row[0] for row in rows]
 push_names_to_sheet(sheet, recognized_names)
 # Open the default camera (change index if you have multiple cameras)
-# cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.12:554/'
+# cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.100.126:554/'
 # camera = cv2.VideoCapture(cam_path) 
-camera = cv2.VideoCapture(0)
+camera = cv2.VideoCapture(1)
 # Load the VGGFace model for face recognition
 model = DeepFace.build_model("VGG-Face")
 
@@ -123,7 +122,7 @@ while True:
     ret, frame = camera.read()
 
     # Convert the frame to RGB format
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame_rgb = frame[:, :, ::-1]
 
     # Detect faces in the frame using MTCNN
     faces = face_detector.detect_faces(frame_rgb)
