@@ -3,18 +3,8 @@ from deepface import DeepFace
 import sqlite3
 import numpy as np
 from datetime import datetime
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from mtcnn import MTCNN
 from sklearn.metrics.pairwise import cosine_similarity
-
-credentials_file = "river-engine-400013-b1d721c87331.json"
-spreadsheet_id = "1qTj4g-Yy-iuscuGuyt38GCMTPKctLtZhC1s5e0qfmU8"
-worksheet_name = "database"
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
-client = gspread.authorize(credentials)
-sheet = client.open_by_key(spreadsheet_id).worksheet(worksheet_name)
 
 # Connect to the SQLite database
 conn = sqlite3.connect("face_encodings_deepface_facenet.db")
@@ -22,8 +12,6 @@ cursor = conn.cursor()
 face_names = []
 sent_names = set()
 
-now = datetime.now()
-current_date = now.strftime("%Y-%m-%d")
 
 def calculate_similarity(embedding1, embedding2):
     # Convert the embeddings to NumPy arrays
@@ -59,13 +47,14 @@ def recognize_face(face_embedding):
     # Calculate the confidence score based on the similarity
     confidence = calculate_confidence(max_similarity)
     # Adjust the threshold for considering a face as "Unknown"
-    if confidence < 0.7:  # Adjust the threshold as needed
+    if confidence < 0.8:  # Adjust the threshold as needed
         recognized_name = "Unknown"
     return recognized_name, confidence
 
 # Open the default camera (change index if you have multiple cameras)
-cam_path = 'rtsp://admin:Dlhcmut@k20@192.168.1.12:554/'
-camera = cv2.VideoCapture(cam_path) 
+camera = cv2.VideoCapture(0) 
+camera_1 = cv2.VideoCapture(1) 
+
 # Load the FaceNet model for face recognition
 model = DeepFace.build_model("Facenet")
 
@@ -110,15 +99,6 @@ while True:
                 # Display the recognized name and confidence above the face rectangle
                 text = f"{recognized_name}: {confidence:.2f}"
                 cv2.putText(frame, text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-                if recognized_name not in sent_names and recognized_name != "Unknown":
-                    # Write down the current time
-                    current_time = now.strftime("%H:%M:%S")
-
-                    # Insert information to the Google Sheet
-                    sheet.append_row([recognized_name, current_date, current_time])
-                    sent_names.add(recognized_name)
-
     # Display the frame with recognized faces
     cv2.imshow("Face Recognition", frame)
 

@@ -7,7 +7,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from mtcnn import MTCNN
 from sklearn.metrics.pairwise import cosine_similarity
-from deepface.commons import functions
+# from deepface.commons import functions
 
 credentials_file = "river-engine-400013-b1d721c87331.json"
 spreadsheet_id = "1fDevrxGaxaJ1OchLWNlblrP9fHoaUs-hBeGe7xoZegM"
